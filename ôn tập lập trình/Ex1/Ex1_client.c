@@ -13,6 +13,16 @@ int main ()
     char email[BUFFER_SIZE], password[BUFFER_SIZE];
     char send_message[BUFFER_SIZE], response[BUFFER_SIZE];
 
+    printf ("\nNhập tài khoản mới: ");
+    fgets (email, BUFFER_SIZE, stdin);
+    email[strcspn (email, "\r\n")] = '\0';
+
+    printf ("Mật khẩu: ");
+    fgets (password, BUFFER_SIZE, stdin);
+    password[strcspn (password, "\r\n")] = '\0';
+
+    sprintf (send_message, "%s,%s", email, password);
+
     main_socket = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
     server_address.sin_port = htons (2004);
@@ -25,15 +35,6 @@ int main ()
         return -1;
     }
 
-    printf ("\nNhập tài khoản mới: ");
-    fgets (email, BUFFER_SIZE, stdin);
-    email[strcspn (email, "\r\n")] = '\0';
-
-    printf ("Mật khẩu: ");
-    fgets (password, BUFFER_SIZE, stdin);
-    password[strcspn (password, "\r\n")] = '\0';
-
-    sprintf (send_message, "%s,%s", email, password);
     send (main_socket, send_message, strlen (send_message), 0);
 
     int byte_received = recv (main_socket, response, sizeof (response), 0);

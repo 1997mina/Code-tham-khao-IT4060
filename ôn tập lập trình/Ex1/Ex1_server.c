@@ -13,47 +13,36 @@ pthread_mutex_t lock;
 
 int check_syntax (char *receive_message)
 {
-    char email[BUFFER_SIZE], *password;
+    char email[BUFFER_SIZE], password[BUFFER_SIZE];
     FILE *file;
     
-    if (strchr (receive_message, ',') == NULL)
+    // Không có dấu phẩy, thiếu thông tin
+    if (sscanf (receive_message, "%[^,],%[^,]", email, password) != 2)
         return -1;
-    
-    password = strchr (receive_message, ',') + 1;
-
-    strcpy (email, receive_message);
-    email[strcspn (email, ",")] = '\0';
-
-    if (strchr (email, '@') == NULL)
-        return -1;
-    if (strlen (email) == 0 || strlen (password) == 0)
-        return -1;
-
-    char *second_half_email = strchr (email, '@') + 1;
-    if (strcmp (second_half_email, "example.com"))
+    // Sai định dạng email
+    if (strstr (email, "example.com") == NULL || strchr (email, '@') == NULL)
         return -1;
 
     file = fopen ("users.txt", "r");
 
     if (file != NULL)
     {
-        fseek (file, 0, SEEK_END);
-        long length = ftell (file);
-        fseek (file, 0, SEEK_SET);
-        
-        char *content = malloc (length + 1);
-        fread (content, 1, length, file);
-
-        fclose (file);
-
-        if (strstr (content, email) != NULL)
-            return 0;
+        char account[BUFFER_SIZE];
+        while (fgets (account, sizeof (account), file) != NULL)
+        {
+            account[strcspn (account, "\n")] = '\0';
+            // Email đã tồn tại
+            if (strstr (account, email) != NULL)
+                return 0;
+        }
     }
+
+    fclose (file);
 
     file = fopen ("users.txt", "a");
     fprintf (file, "%s:%s\n", email, password);
 
-    printf ("Đã lưu tài khoản %s vào máy chủ\n", email);
+    printf ("Đã lưu tài khoản %s\n", email);
     fclose (file);
     
     return 1;
