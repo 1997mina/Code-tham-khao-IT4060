@@ -94,16 +94,18 @@ int main ()
                 input1[strcspn (input1, "\r\n")] = '\0';
 
                 ftp_retr (control_socket, input1);
+                // Gửi lệnh RETR để tải xuống tệp
                 break;
-
+            // Xử lý mã phản hồi 150 (File status okay; about to open data connection)
             case 3:
                 printf ("\r\nWhich file do you want to upload?: ");
                 fgets (input1, BUFFER_SIZE, stdin);
                 input1[strcspn (input1, "\r\n")] = '\0';
 
                 ftp_stor (control_socket, input1);
+                // Gửi lệnh STOR để tải lên tệp
                 break;
-
+            // Xử lý mã phản hồi 150 (File status okay; about to open data connection)
             case 4:
                 if (!ftp_list (control_socket))
                 {
@@ -116,7 +118,8 @@ int main ()
                 input1[strcspn (input1, "\r\n")] = '\0';
 
                 ftp_delete (control_socket, input1);
-                break;
+                // Gửi lệnh DELE để xóa tệp
+                break; // Xử lý mã phản hồi 250 (Requested file action okay, completed)
 
             case 5:
                 if (!ftp_list (control_socket))
@@ -134,11 +137,13 @@ int main ()
                 input2[strcspn (input2, "\r\n")] = '\0';
 
                 ftp_rename (control_socket, input1, input2);
-                break;
+                // Gửi lệnh RNFR và RNTO để đổi tên tệp
+                break; // Xử lý mã phản hồi 350 (Requested file action pending further information) và 250 (Requested file action okay, completed)
 
             case 6:
                 send (control_socket, "PWD\r\n", 5, 0);
                 receive_ftp_response (control_socket, response);
+                // Gửi lệnh PWD để lấy thư mục làm việc hiện tại
 
                 sscanf (response, "257 \"/%s", input1);
                 input1[strcspn (input1, "\"")] = '\0';
@@ -150,14 +155,16 @@ int main ()
                 input2[strcspn (input2, "\r\n")] = '\0';
 
                 ftp_cwd (control_socket, input2);
-                break;
+                // Gửi lệnh CWD để thay đổi thư mục làm việc
+                break; // Xử lý mã phản hồi 250 (Requested file action okay, completed)
         
             case 7:
                 printf ("\r\nDisconnecting from FTP server ...\r\n\r\n");
                 
                 send (control_socket, "QUIT\r\n", 6, 0);
+                // Gửi lệnh QUIT để thoát khỏi phiên FTP
                 receive_ftp_response (control_socket, response);
-
+                // Xử lý mã phản hồi 221 (Service closing control connection)
                 sleep (1);
                 
                 close (control_socket);
@@ -224,10 +231,11 @@ int open_data_connection (int control_socket)
     char data_ip[INET_ADDRSTRLEN], response[BUFFER_SIZE];
     
     send (control_socket, "PASV\r\n", 6, 0);
+    // Gửi lệnh PASV để yêu cầu chế độ thụ động
 
     if (receive_ftp_response (control_socket, response) != 227)
     {
-        perror ("ERROR occurs when opening data connection");
+        perror ("ERROR occurs when opening data connection"); // Xử lý mã phản hồi 227 (Entering Passive Mode)
         exit (EXIT_FAILURE);
     }
 
@@ -236,6 +244,7 @@ int open_data_connection (int control_socket)
         &h1, &h2, &h3, &h4, &p1, &p2);
 
     sprintf (data_ip, "%d.%d.%d.%d", h1, h2, h3, h4);
+    // Phân tích địa chỉ IP cho kết nối dữ liệu
 
     data_socket = socket (AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
@@ -259,10 +268,11 @@ bool ftp_list (int control_socket)
     int data_socket = open_data_connection (control_socket);
 
     send (control_socket, "LIST\r\n", 6, 0);
+    // Gửi lệnh LIST để yêu cầu danh sách tệp
 
     if (receive_ftp_response (control_socket, response) != 150)
     {
-        perror ("ERROR occurs when receiving files");
+        perror ("ERROR occurs when receiving files"); // Xử lý mã phản hồi 150 (File status okay; about to open data connection)
         exit (EXIT_FAILURE);
     }
 
@@ -283,7 +293,7 @@ bool ftp_list (int control_socket)
 
     close (data_socket);
     receive_ftp_response (control_socket, response);
-
+    // Xử lý mã phản hồi 226 (Closing data connection. Requested file action successful)
     return found;
 }
 
@@ -296,10 +306,11 @@ void ftp_retr (int control_socket, const char *file_name)
     sprintf (command, "RETR %s\r\n", file_name);
 
     send (control_socket, command, strlen (command), 0);
+    // Gửi lệnh RETR để tải xuống tệp
 
     if (receive_ftp_response (control_socket, response) != 150)
     {
-        printf ("\r\nThis file does not exist\r\n");
+        printf ("\r\nThis file does not exist\r\n"); // Xử lý mã phản hồi 150 (File status okay; about to open data connection)
         return;
     }
 
@@ -315,7 +326,7 @@ void ftp_retr (int control_socket, const char *file_name)
     fwrite (file_content, 1, content_length, download_file);
 
     if (receive_ftp_response (control_socket, response) == 226)
-        printf ("\r\nDownload file complete\r\n");
+        printf ("\r\nDownload file complete\r\n"); // Xử lý mã phản hồi 226 (Closing data connection. Requested file action successful)
     else
         perror ("\r\nERROR occurs while downloading this file");
 
@@ -338,10 +349,11 @@ void ftp_stor (int control_socket, const char *file_name)
     sprintf (command, "STOR %s\r\n", file_name);
 
     send (control_socket, command, strlen (command), 0);
+    // Gửi lệnh STOR để tải lên tệp
 
     if (receive_ftp_response (control_socket, response) != 150)
     {
-        perror ("ERROR occurs when uploading a file");
+        perror ("ERROR occurs when uploading a file"); // Xử lý mã phản hồi 150 (File status okay; about to open data connection)
         return;
     }
 
@@ -357,7 +369,7 @@ void ftp_stor (int control_socket, const char *file_name)
     close (data_socket);
 
     if (receive_ftp_response (control_socket, response) == 226)
-        printf ("\r\nUpload file complete\r\n");
+        printf ("\r\nUpload file complete\r\n"); // Xử lý mã phản hồi 226 (Closing data connection. Requested file action successful)
     else
         perror ("\r\nERROR occurs while uploading this file");
 
@@ -370,16 +382,18 @@ void ftp_rename (int control_socket, const char *old_file_name, const char *new_
     char command[BUFFER_SIZE], response[BUFFER_SIZE];
 
     sprintf (command, "RNFR %s\r\n", old_file_name);
-    send (control_socket, command, strlen (command), 0);
+    send (control_socket, command, strlen (command), 0); // Gửi lệnh RNFR (Rename From)
 
     if (receive_ftp_response (control_socket, response) != 350)
     {
-        printf ("\r\nThis file does not exist\r\n");
+        printf ("\r\nThis file does not exist\r\n"); // Xử lý mã phản hồi 350 (Requested file action pending further information)
         return;
     }
 
+    // Gửi lệnh RNTO (Rename To)
+
     sprintf (command, "RNTO %s\r\n", new_file_name);
-    send (control_socket, command, strlen (command), 0);
+    send (control_socket, command, strlen (command), 0); 
 
     if (receive_ftp_response (control_socket, response) == 250)
         printf ("\r\nRename file complete\r\n");
@@ -392,10 +406,11 @@ void ftp_delete (int control_socket, const char *file_name)
     char command[BUFFER_SIZE], response[BUFFER_SIZE];
 
     sprintf (command, "DELE %s\r\n", file_name);
+    // Gửi lệnh DELE để xóa tệp
     send (control_socket, command, strlen (command), 0);
 
     if (receive_ftp_response (control_socket, response) == 250)
-        printf ("\r\n%s is already deleted\r\n", file_name);
+        printf ("\r\n%s is already deleted\r\n", file_name); // Xử lý mã phản hồi 250 (Requested file action okay, completed)
     else
         printf ("\r\nThis file is not exist on server\r\n");
 }
@@ -405,10 +420,11 @@ void ftp_cwd (int control_socket, const char *directory)
     char command[BUFFER_SIZE], response[BUFFER_SIZE];
 
     sprintf (command, "CWD %s\r\n", directory);
+    // Gửi lệnh CWD để thay đổi thư mục làm việc
     send (control_socket, command, strlen (command), 0);
 
     if (receive_ftp_response (control_socket, response) == 250)
-        printf ("\r\nChanging directory complete\r\n");
+        printf ("\r\nChanging directory complete\r\n"); // Xử lý mã phản hồi 250 (Requested file action okay, completed)
     else
         printf ("\r\nThis directory does not exist\r\n");
 }
@@ -462,13 +478,14 @@ void login (int control_socket)
         fgets (username, BUFFER_SIZE, stdin);
 
         sprintf (command, "USER %s", username);
+        // Gửi lệnh USER để gửi tên người dùng
         send (control_socket, command, strlen (command), 0);
 
         response_code = receive_ftp_response (control_socket, response);
 
         if (response_code != 331)
         {
-            perror ("ERROR occurs after entering username");
+            perror ("ERROR occurs after entering username"); // Xử lý mã phản hồi 331 (User name okay, need password)
             exit (EXIT_FAILURE);
         }
 
@@ -476,13 +493,14 @@ void login (int control_socket)
         type_password (password, sizeof (password));
 
         sprintf (command, "PASS %s\r\n", password);
+        // Gửi lệnh PASS để gửi mật khẩu
         send (control_socket, command, strlen (command), 0);
 
         response_code = receive_ftp_response (control_socket, response);
 
-        if (response_code == 230)
+        if (response_code == 230) // Xử lý mã phản hồi 230 (User logged in, proceed)
             break;
-        else if (response_code == 530)
+        else if (response_code == 530) // Xử lý mã phản hồi 530 (Not logged in)
         {
             if (++incorrect_login_count == 3)
             {
