@@ -1,0 +1,8 @@
+- Nhiệm vụ của chương trình server: 
+  • Mở cổng kết nối 8080
+  • Nhận tin nhắn từ client: “Hello from cilent” 
+  • Gửi tin nhắn phản hồi đến cilent: “Hello from server”
+
+- Nhiệm vụ của chương trình cilent:
+  • Nhận tin nhắn từ server: “Hello from server”
+  • Gửi tin nhắn phản hồi đến server: “Hello from cilent”
